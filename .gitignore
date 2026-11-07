@@ -10,4 +10,8 @@ wheels/
 # Virtual environments
 .venv
 .env
-
+artifacts/
+.vscode/
+src/
+*.ipynb
+testdata
