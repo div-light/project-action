@@ -1,0 +1,49 @@
+name: Orange HRM Testing
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        env:
+            HEADLESS: "1"
+            UV_NO_SYNC: "1"
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            
+            - name: Install uv
+              uses: astral-sh/setup-uv@v5
+              with:
+                enable-cache: true
+            
+            - name: Install dependencies
+              run: uv sync --frozen --no-install-project
+            
+            - name: Install Playwright Browsers
+              run: uv run playwright install --with-deps chromium
+
+            - name: Run Tests
+              run: uv run pytest -n auto --html=artifacts/report.html --self-contained-html
+            
+            - name: Upload test report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                name: pytest-report
+                path: report.html
+                if-no-files-found: ignore
+
+            - name: Upload screenshots, videos and traces
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                name: playwright-artifacts
+                path: artifacts/
+                if-no-files-found: ignore
