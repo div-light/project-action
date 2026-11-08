@@ -14,4 +14,4 @@ artifacts/
 .vscode/
 src/
 *.ipynb
-testdata
+testdata/

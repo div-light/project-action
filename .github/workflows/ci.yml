@@ -1,49 +1,82 @@
 name: Orange HRM Testing
+
 on:
-    push:
-        branches:
-            - main
-    pull_request:
-        branches:
-            - main
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:            # manual run button
+  schedule:
+    - cron: "0 2 * * *"         # nightly regression
+
+permissions:
+  contents: read                # least privilege
+
+concurrency:                    # cancel outdated runs on the same branch
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
-        env:
-            HEADLESS: "1"
-            UV_NO_SYNC: "1"
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v4
-            
-            - name: Install uv
-              uses: astral-sh/setup-uv@v5
-              with:
-                enable-cache: true
-            
-            - name: Install dependencies
-              run: uv sync --frozen --no-install-project
-            
-            - name: Install Playwright Browsers
-              run: uv run playwright install --with-deps chromium
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --no-install-project
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
 
-            - name: Run Tests
-              run: uv run pytest -n auto --html=artifacts/report.html --self-contained-html
-            
-            - name: Upload test report
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                name: pytest-report
-                path: report.html
-                if-no-files-found: ignore
+  test:
+    needs: lint                 # fail fast: skip slow tests if lint fails
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HEADLESS: "1"
+      UV_NO_SYNC: "1"
+      BASE_URL: ${{ vars.BASE_URL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}   # never hardcode credentials
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --no-install-project
 
-            - name: Upload screenshots, videos and traces
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                name: playwright-artifacts
-                path: artifacts/
-                if-no-files-found: ignore
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: uv run playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: uv run playwright install-deps chromium
+
+      - name: Run tests
+        run: >
+          uv run pytest -n auto --reruns 1
+          --junitxml=artifacts/junit.xml
+          --html=artifacts/report.html --self-contained-html
+
+      - name: Publish test summary
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: artifacts/junit.xml
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: artifacts/
+          retention-days: 14
+          if-no-files-found: warn   # warn, not ignore
