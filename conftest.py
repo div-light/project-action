@@ -71,7 +71,7 @@ def _traced_context(browser, request, **kwargs):
 
         try:
             context.tracing.stop(path=trace_path)
-        except Exception as e:
+        except Exception:  # noqa: BLE001 - teardown must never mask the test result
             logger.exception("Failed to stop tracing")
 
         pages = context.pages
