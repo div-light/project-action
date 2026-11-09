@@ -38,7 +38,7 @@ jobs:
       UV_NO_SYNC: "1"
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
       - run: uv sync --frozen --no-install-project
@@ -59,16 +59,10 @@ jobs:
         run: uv run playwright install-deps chromium
 
       - name: Run tests
-        run: >
+        run:
           uv run pytest -n auto --reruns 1
-          --junitxml=artifacts/junit.xml
           --html=artifacts/report.html --self-contained-html
 
-      - name: Publish test summary
-        if: always()
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: artifacts/junit.xml
 
       - name: Upload artifacts
         if: always()
