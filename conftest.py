@@ -71,7 +71,7 @@ def _traced_context(browser, request, **kwargs):
 
         try:
             context.tracing.stop(path=trace_path)
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to stop tracing")
 
         pages = context.pages
