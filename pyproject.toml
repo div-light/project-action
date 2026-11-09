@@ -23,5 +23,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pytest-rerunfailures>=16.7",
     "ruff>=0.17.4",
 ]
