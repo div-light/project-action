@@ -15,3 +15,4 @@ artifacts/
 src/
 *.ipynb
 testdata/
+*_cache
