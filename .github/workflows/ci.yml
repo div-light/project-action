@@ -36,8 +36,6 @@ jobs:
     env:
       HEADLESS: "1"
       UV_NO_SYNC: "1"
-      BASE_URL: ${{ vars.BASE_URL }}
-      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}   # never hardcode credentials
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
