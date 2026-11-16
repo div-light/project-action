@@ -1,4 +1,4 @@
-name: Orange HRM Testing
+name: Sauce Demo Testing
 
 on:
   push:
